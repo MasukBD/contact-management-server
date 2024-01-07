@@ -42,10 +42,10 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         client.connect();
 
-        // Here User Stand for Contact 
+
+        const contactCollection = client.db('ContactManagement').collection('contacts');
         const userCollection = client.db('ContactManagement').collection('users');
-        // And Manager Stand for User 
-        const managerCollection = client.db('ContactManagement').collection('manager');
+        const favoriteCollection = client.db('ContactManagement').collection('favorite');
 
 
         app.post('/jwt', (req, res) => {
@@ -54,35 +54,35 @@ async function run() {
             res.send(token);
         })
 
-        app.post('/manager', async (req, res) => {
+        app.post('/users', async (req, res) => {
             const newUser = req.body;
             const query = { email: newUser.email };
-            const isExistUser = await managerCollection.findOne(query);
+            const isExistUser = await userCollection.findOne(query);
             if (isExistUser) {
                 return res.status(403).send({ message: 'User Exits Already!' });
             }
-            const result = await managerCollection.insertOne(newUser);
+            const result = await userCollection.insertOne(newUser);
             res.send(result);
-        })
+        });
 
-        app.get('/users', verifyJWToken, async (req, res) => {
+        app.get('/contacts', verifyJWToken, async (req, res) => {
             let query = {};
             const phone = req.query?.search;
             if (phone) {
                 query = { phoneNumber: { $regex: phone, $options: 'i' } }
             }
-            const cursor = userCollection.find(query);
+            const cursor = contactCollection.find(query);
             const result = await cursor.toArray();
             res.send(result);
         })
 
-        app.post('/users', verifyJWToken, async (req, res) => {
+        app.post('/contacts', verifyJWToken, async (req, res) => {
             const user = req.body;
-            const result = await userCollection.insertOne(user);
+            const result = await contactCollection.insertOne(user);
             res.send(result);
         });
 
-        app.put('/users/:id', verifyJWToken, async (req, res) => {
+        app.put('/contacts/:id', verifyJWToken, async (req, res) => {
             const id = req.params?.id;
             const filter = { _id: new ObjectId(id) };
             const getData = req.body;
@@ -96,14 +96,32 @@ async function run() {
                     photoURL: getData.photoURL
                 }
             }
-            const result = await userCollection.updateOne(filter, updatedToDB, options);
+            const result = await contactCollection.updateOne(filter, updatedToDB, options);
             res.send(result);
         })
 
-        app.delete('/users/:id', verifyJWToken, async (req, res) => {
+        app.delete('/contacts/:id', verifyJWToken, async (req, res) => {
             const id = req.params?.id;
             const query = { _id: new ObjectId(id) };
-            const result = await userCollection.deleteOne(query);
+            const result = await contactCollection.deleteOne(query);
+            res.send(result);
+        });
+
+        app.get('/favorite', verifyJWToken, async (req, res) => {
+            let query = {};
+            const email = req.query?.email;
+            if (email) {
+                query = { email: email }
+            };
+            const cursor = favoriteCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+
+        })
+
+        app.post('/favorite', verifyJWToken, async (req, res) => {
+            const favoriteItem = req.body;
+            const result = await favoriteCollection.insertOne(favoriteItem);
             res.send(result);
         })
 
